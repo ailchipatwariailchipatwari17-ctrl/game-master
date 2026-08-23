@@ -10,56 +10,47 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. कोड और Zip फाइल चेकआउट करें
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. Zip फाइल को अनज़िप करें
       - name: Unzip Project Code
         run: unzip -o gamemaster-ai.zip -d .
 
-      # 3. Node.js सेटअप करें (बिना cache के)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # 4. Java 17 सेटअप करें
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # 5. NPM पैकेज इंस्टॉल करें
       - name: Install Dependencies
         run: npm install
 
-      # 6. React App बिल्ड करें
       - name: Build Web App
         run: npm run build
 
-      # 7. Capacitor sync चलाएं (यदि कैपेसिटर है)
-      - name: Sync Capacitor
-        run: npx cap sync android || echo "Capacitor not found, continuing..."
-
-      # 8. Gradlew Executable बनाएं
-      - name: Make Gradlew Executable
+      # अगर Capacitor स्थापित नहीं है तो इसे खुद जोडें
+      - name: Add Capacitor Android Platform
         run: |
-          if [ -d "android" ]; then
-            chmod +x android/gradlew
-          fi
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init GameMaster com.gamemaster.app --web-dir dist || npx cap init GameMaster com.gamemaster.app --web-dir build
+          npx cap add android
+          npx cap sync android
 
-      # 9. APK तैयार करें
+      - name: Make Gradlew Executable
+        run: chmod +x android/gradlew
+
       - name: Build Android APK
         run: |
-          if [ -d "android" ]; then
-            cd android && ./gradlew assembleDebug
-          fi
+          cd android
+          ./gradlew assembleDebug
 
-      # 10. APK डाउनलोड के लिए अपलोड करें
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
+          name: game-master-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
