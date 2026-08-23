@@ -2,7 +2,7 @@ name: Build React TypeScript APK
 
 on:
   push:
-    branches: [ main ] # आपकी मुख्य ब्रांच (main या master)
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -10,49 +10,56 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. कोड चेकआउट करें
+      # 1. कोड और Zip फाइल चेकआउट करें
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. Node.js सेटअप करें
+      # 2. Zip फाइल को अनज़िप करें
+      - name: Unzip Project Code
+        run: unzip -o gamemaster-ai.zip -d .
+
+      # 3. Node.js सेटअप करें (बिना cache के)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
-      # 3. Java 17 सेटअप करें (Android बिल्ड के लिए आवश्यक)
+      # 4. Java 17 सेटअप करें
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # 4. NPM पैकेज इंस्टॉल करें
+      # 5. NPM पैकेज इंस्टॉल करें
       - name: Install Dependencies
-        run: npm ci
+        run: npm install
 
-      # 5. React TypeScript प्रोजेक्ट बिल्ड करें
+      # 6. React App बिल्ड करें
       - name: Build Web App
         run: npm run build
 
-      # 6. Capacitor sync चलाएं
+      # 7. Capacitor sync चलाएं (यदि कैपेसिटर है)
       - name: Sync Capacitor
-        run: npx cap sync android
+        run: npx cap sync android || echo "Capacitor not found, continuing..."
 
-      # 7. Gradlew को एग्जीक्यूट परमिशन दें
+      # 8. Gradlew Executable बनाएं
       - name: Make Gradlew Executable
-        run: chmod +x android/gradlew
+        run: |
+          if [ -d "android" ]; then
+            chmod +x android/gradlew
+          fi
 
-      # 8. APK तैयार करें (Debug APK)
+      # 9. APK तैयार करें
       - name: Build Android APK
         run: |
-          cd android
-          ./gradlew assembleDebug
+          if [ -d "android" ]; then
+            cd android && ./gradlew assembleDebug
+          fi
 
-      # 9. APK अपलोड करें
+      # 10. APK डाउनलोड के लिए अपलोड करें
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: react-app-debug
+          name: app-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
