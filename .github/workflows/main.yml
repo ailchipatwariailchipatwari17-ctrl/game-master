@@ -1,0 +1,58 @@
+name: Build React TypeScript APK
+
+on:
+  push:
+    branches: [ main ] # आपकी मुख्य ब्रांच (main या master)
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. कोड चेकआउट करें
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Node.js सेटअप करें
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # 3. Java 17 सेटअप करें (Android बिल्ड के लिए आवश्यक)
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # 4. NPM पैकेज इंस्टॉल करें
+      - name: Install Dependencies
+        run: npm ci
+
+      # 5. React TypeScript प्रोजेक्ट बिल्ड करें
+      - name: Build Web App
+        run: npm run build
+
+      # 6. Capacitor sync चलाएं
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      # 7. Gradlew को एग्जीक्यूट परमिशन दें
+      - name: Make Gradlew Executable
+        run: chmod +x android/gradlew
+
+      # 8. APK तैयार करें (Debug APK)
+      - name: Build Android APK
+        run: |
+          cd android
+          ./gradlew assembleDebug
+
+      # 9. APK अपलोड करें
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: react-app-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
